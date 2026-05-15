@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Voice AI</title>
+</head>
+
+<body>
+
+    <h1>Realtime Voice AI</h1>
+
+    <button id="recordBtn">
+        Hold To Talk
+    </button>
+
+    <script>
+
+        const button =
+            document.getElementById("recordBtn");
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        // Start recording when mouse is pressed
+        button.onmousedown = async () => {
+
+            // Get microphone access
+            const stream =
+                await navigator.mediaDevices.getUserMedia({
+                    audio: true
+                });
+
+            // Create recorder
+            mediaRecorder =
+                new MediaRecorder(stream);
+
+            audioChunks = [];
+
+            // Store audio chunks
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            // Start recording
+            mediaRecorder.start();
+
+            console.log("Recording started...");
+        };
+
+        // Stop recording when mouse released
+        button.onmouseup = async () => {
+
+            mediaRecorder.stop();
+
+            console.log("Recording stopped...");
+
+            // When recording fully stops
+            mediaRecorder.onstop = async () => {
+
+                // Convert chunks into audio blob
+                const audioBlob =
+                    new Blob(audioChunks, {
+                        type: "audio/webm"
+                    });
+
+                // Create form data
+                const formData = new FormData();
+
+                formData.append(
+                    "audio",
+                    audioBlob,
+                    "recording.webm"
+                );
+
+                console.log("Sending audio to backend...");
+
+                // Send audio to FastAPI backend
+                const response =
+                    await fetch("/voice", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                console.log("Receiving AI reply...");
+
+                // Receive AI voice reply
+                const replyBlob =
+                    await response.blob();
+
+                // Create playable URL
+                const audioUrl =
+                    URL.createObjectURL(replyBlob);
+
+                // Play AI reply
+                const audio =
+                    new Audio(audioUrl);
+
+                audio.play();
+
+                console.log("Playing AI voice...");
+            };
+        };
+
+    </script>
+
+</body>
+
+</html>
